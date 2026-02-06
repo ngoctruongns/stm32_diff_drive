@@ -1,0 +1,8 @@
+build/
+Debug/
+Release/
+Temp/
+Library/
+*.log
+*.tmp
+.vscode/
