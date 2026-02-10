@@ -199,24 +199,16 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles ADC1, ADC2 and ADC3 global interrupts.
+  * @brief This function handles TIM2 global interrupt.
   */
-void ADC_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  /* USER CODE BEGIN ADC_IRQn 0 */
-    // Check for end of conversion flag
-    if (LL_ADC_IsActiveFlag_EOCS(ADC1)) {
-        // Clear the end of conversion flag
-        LL_ADC_ClearFlag_EOCS(ADC1);
+  /* USER CODE BEGIN TIM2_IRQn 0 */
 
-        // Read the ADC conversion result
-        uint16_t adc_value = LL_ADC_REG_ReadConversionData12(ADC1);
-        adc1_interrupt_handler(adc_value);
-    }
-  /* USER CODE END ADC_IRQn 0 */
-  /* USER CODE BEGIN ADC_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 0 */
+  /* USER CODE BEGIN TIM2_IRQn 1 */
 
-  /* USER CODE END ADC_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
@@ -225,15 +217,24 @@ void ADC_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
-    if (LL_USART_IsActiveFlag_RXNE(USART2)) {
-        // Read DR will clear RXNE flag
-        uint8_t data = LL_USART_ReceiveData8(USART2);
-        usart2_interrupt_handler(data);
-    }
+
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM5 global interrupt.
+  */
+void TIM5_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM5_IRQn 0 */
+
+  /* USER CODE END TIM5_IRQn 0 */
+  /* USER CODE BEGIN TIM5_IRQn 1 */
+
+  /* USER CODE END TIM5_IRQn 1 */
 }
 
 /**

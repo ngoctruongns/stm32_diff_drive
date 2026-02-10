@@ -19,6 +19,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "i2c.h"
+#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -177,12 +179,11 @@ int main(void)
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 
   /* System interrupt init*/
-  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-
-  /* SysTick_IRQn interrupt configuration */
-  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
+  NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_0);
 
   /* USER CODE BEGIN Init */
+  // Disable all interrupts during setup
+  __disable_irq();
 
   /* USER CODE END Init */
 
@@ -197,16 +198,21 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM2_Init();
-  MX_TIM4_Init();
-  MX_USART2_UART_Init();
-  MX_TIM7_Init();
-  MX_TIM5_Init();
+  MX_I2C1_Init();
+  MX_SPI1_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM5_Init();
+  MX_TIM7_Init();
+  MX_USART2_UART_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
     // Initialize servos
     Servo_Init();
+
+    // Enable interrupts after setup
+    __enable_irq();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -277,7 +283,7 @@ void SystemClock_Config(void)
   {
 
   }
-  LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE, LL_RCC_PLLM_DIV_4, 168, LL_RCC_PLLP_DIV_2);
+  LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE, LL_RCC_PLLM_DIV_8, 336, LL_RCC_PLLP_DIV_2);
   LL_RCC_PLL_Enable();
 
    /* Wait till PLL is ready */
