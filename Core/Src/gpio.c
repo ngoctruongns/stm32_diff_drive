@@ -70,14 +70,14 @@ void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(GPIOC, L298_IN1_Pin|L298_IN2_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(SPI2_CS_GPIO_Port, SPI2_CS_Pin);
-
-  /**/
   LL_GPIO_ResetOutputPin(GPIOD, L298_IN3_Pin|L298_IN4_Pin|LD4_Pin|LD3_Pin
                           |LD5_Pin|LD6_Pin|Audio_RST_Pin);
 
   /**/
   LL_GPIO_SetOutputPin(OTG_FS_PowerSwitchOn_GPIO_Port, OTG_FS_PowerSwitchOn_Pin);
+
+  /**/
+  LL_GPIO_SetOutputPin(SPI2_CS_GPIO_Port, SPI2_CS_Pin);
 
   /**/
   GPIO_InitStruct.Pin = LL_GPIO_PIN_3;

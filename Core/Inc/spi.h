@@ -40,7 +40,9 @@ void MX_SPI1_Init(void);
 void MX_SPI2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+uint8_t SPIx_transferOneByte(SPI_TypeDef *spi, uint8_t data);
+void SPIx_transmitBuffer(SPI_TypeDef *spi, const uint8_t *data, uint16_t len);
+void SPIx_receiveBuffer(SPI_TypeDef *spi, uint8_t *buf, uint16_t len);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
@@ -48,4 +50,3 @@ void MX_SPI2_Init(void);
 #endif
 
 #endif /* __SPI_H__ */
-

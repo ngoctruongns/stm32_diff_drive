@@ -35,6 +35,8 @@ extern "C" {
 /* USER CODE BEGIN Private defines */
 #define MOTOR_PWM1 LL_TIM_CHANNEL_CH1
 #define MOTOR_PWM2 LL_TIM_CHANNEL_CH2
+#define MOTOR_PWM3 LL_TIM_CHANNEL_CH3
+#define MOTOR_PWM4 LL_TIM_CHANNEL_CH4
 
 // Servo Identifiers
 typedef enum {
@@ -67,6 +69,10 @@ void TIM4_enable_PWM(uint32_t Channel);
 void TIM4_disable_PWM(uint32_t Channel);
 void TIM4_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle);
 
+// TIM3 PWM Control Functions (for motor control)
+void TIM3_enable_PWM(uint32_t Channel);
+void TIM3_disable_PWM(uint32_t Channel);
+void TIM3_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle);
 /* Servo Control Functions */
 // Control servo motor (0-180 degrees)
 // PWM frequency: 50Hz

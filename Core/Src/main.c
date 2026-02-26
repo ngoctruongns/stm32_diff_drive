@@ -28,6 +28,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "PS2X_lib.h"
+#include "log_helper.h"
 
 /* USER CODE END Includes */
 
@@ -58,6 +60,7 @@ int16_t angle;
 float temperature;
 char usart_buffer[50];
 int32_t encoder_count = 0;
+uint32_t ms_tick_count = 0;
 
 /* USER CODE END PV */
 
@@ -156,7 +159,34 @@ void tim7_interrupt_handler(void)
 
     // Get encoder count from TIM2
     encoder_count = Encoder_GetCount();
-    printf("Encoder Count: %ld, ADC Value: %d\r\n", encoder_count, adc_value);
+    // printf("Encoder Count: %ld, ADC Value: %d\r\n", encoder_count, adc_value);
+}
+
+void sys_tick_handler(void)
+{
+    ms_tick_count++;
+}
+
+uint32_t get_ms_tick_count(void)
+{
+    return ms_tick_count;
+}
+
+uint64_t get_us_tick_count(void)
+{
+    // Return microsecond tick count based on ms_tick_count and get current SysTick value for finer resolution
+     uint32_t systick_val = SysTick->VAL; // Current SysTick counter value
+     uint32_t systick_reload = SysTick->LOAD; // SysTick reload value
+
+     // Calculate elapsed microseconds since last millisecond tick
+    uint64_t us_tick_count = (systick_reload - systick_val) / (SystemCoreClock / 1000000);
+    return (ms_tick_count * 1000) + (us_tick_count % 1000);
+}
+
+void delay_us(uint32_t us)
+{
+    uint64_t start = get_us_tick_count();
+    while ((get_us_tick_count() - start) < us);
 }
 
 /* USER CODE END 0 */
@@ -191,7 +221,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-    LL_Init1msTick(168000000);
     LL_SYSTICK_EnableIT();
 
   /* USER CODE END SysInit */
@@ -209,7 +238,13 @@ int main(void)
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
     // Initialize servos
-    Servo_Init();
+    // Servo_Init();
+
+    // Enable PWM output for timer 3 with frequency 1 kHz (for motor control)
+    TIM3_enable_PWM(MOTOR_PWM1);
+    TIM3_enable_PWM(MOTOR_PWM2);
+    TIM3_enable_PWM(MOTOR_PWM3);
+    TIM3_enable_PWM(MOTOR_PWM4);
 
     // Enable interrupts after setup
     __enable_irq();
@@ -219,7 +254,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     // ADC1_triggerConvert();
 
+    // Set log level
+    set_log_level(LOG_LEVEL_DBG);
 
+    // Init PS2X
+    for (int i =0; i<10; i++)
+    {
+
+        if (ps2x_init() == PS2X_SUCCESS) {
+            // ps2x_config_mode(PS2X_MODE_PRESSURES);
+            LOG_DBG("PS2X Controller Initialized Successfully\r\n");
+            break;
+        } else if (i == 9) {
+            LOG_ERR("Failed to Initialize PS2X Controller\r\n");
+        }
+    }
 
   while (1)
   {
@@ -253,10 +302,32 @@ int main(void)
     // USART2_sendString(usart_buffer);
     // USART2_Transmit(usart_buffer, strlen(usart_buffer));
 
-    // convert ADC to angle (0-180)
-    angle = (adc_value * 180) / 4095;
-    Servo_setAngle(SERVO1, angle);
-    LL_mDelay(300);
+    // // convert ADC to angle (0-180)
+    // angle = (adc_value * 180) / 4095;
+    // Servo_setAngle(SERVO1, angle);
+    // LL_mDelay(300);
+
+    // Set 4 channels PWM duty cycle based on ADC value (for motor control)
+    // Fake ADC value for testing
+    // adc_value = 2048; // Midpoint value for testing (50% duty cycle)
+    uint32_t duty_cycle = (adc_value * 100) / 4095; // Convert ADC value to percentage
+    TIM3_Set_PWM_DutyCycle(MOTOR_PWM1, duty_cycle);
+    TIM3_Set_PWM_DutyCycle(MOTOR_PWM2, duty_cycle);
+    TIM3_Set_PWM_DutyCycle(MOTOR_PWM3, duty_cycle);
+    TIM3_Set_PWM_DutyCycle(MOTOR_PWM4, duty_cycle);
+
+    // Read PS2 controller state and print button states
+    ps2x_read_gamepad();
+    // Get data from PS2X and print for debugging
+    PS2X_State ps2_state = ps2x_getAllData();
+    printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
+    printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
+    printf("Joystick Right: X=%d Y=%d\r\n", ps2_state.rx, ps2_state.ry);
+    if (ps2_state.btn1.up == PS2X_BTN_ACTIVE) {
+        printf("Up button is pressed\r\n");
+    }
+
+    LL_mDelay(500);
 
     /* USER CODE END WHILE */
 

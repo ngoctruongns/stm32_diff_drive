@@ -99,7 +99,7 @@ void MX_TIM2_Init(void)
 //   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE END TIM2_Init 1 */
-  LL_TIM_SetEncoderMode(TIM2, LL_TIM_ENCODERMODE_X2_TI1);
+  LL_TIM_SetEncoderMode(TIM2, LL_TIM_ENCODERMODE_X4_TI12);
   LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV16_N5);
@@ -143,12 +143,12 @@ void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 1 */
 
   /* USER CODE END TIM3_Init 1 */
-  TIM_InitStruct.Prescaler = 0;
+  TIM_InitStruct.Prescaler = 83;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-  TIM_InitStruct.Autoreload = 65535;
+  TIM_InitStruct.Autoreload = 999;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   LL_TIM_Init(TIM3, &TIM_InitStruct);
-  LL_TIM_DisableARRPreload(TIM3);
+  LL_TIM_EnableARRPreload(TIM3);
   LL_TIM_SetClockSource(TIM3, LL_TIM_CLOCKSOURCE_INTERNAL);
   LL_TIM_OC_EnablePreload(TIM3, LL_TIM_CHANNEL_CH1);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
@@ -170,6 +170,13 @@ void MX_TIM3_Init(void)
   LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_RESET);
   LL_TIM_DisableMasterSlaveMode(TIM3);
   /* USER CODE BEGIN TIM3_Init 2 */
+    // Start TIM3 in PWM mode
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH3);
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH3);
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH2);
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH1);
+    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH4);
+    LL_TIM_EnableCounter(TIM3);
 
   /* USER CODE END TIM3_Init 2 */
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
@@ -232,7 +239,7 @@ void MX_TIM5_Init(void)
   /* USER CODE BEGIN TIM5_Init 1 */
 
   /* USER CODE END TIM5_Init 1 */
-  LL_TIM_SetEncoderMode(TIM5, LL_TIM_ENCODERMODE_X2_TI1);
+  LL_TIM_SetEncoderMode(TIM5, LL_TIM_ENCODERMODE_X4_TI12);
   LL_TIM_IC_SetActiveInput(TIM5, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM5, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM5, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV16_N5);
@@ -314,11 +321,13 @@ void TIM4_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle) {
             LL_TIM_OC_SetCompareCH2(TIM4, DutyCycle);
             break;
         case LL_TIM_CHANNEL_CH3:
+            LL_TIM_OC_SetCompareCH3(TIM4, DutyCycle);
             break;
+        case LL_TIM_CHANNEL_CH4:
+            LL_TIM_OC_SetCompareCH4(TIM4, DutyCycle);
         default:
             return; // Invalid channel
     }
-
 }
 
 // Config servo motor
@@ -358,4 +367,37 @@ int32_t Encoder_GetCount(void)
     return (int32_t)LL_TIM_GetCounter(TIM2);
 }
 
+// Timer3 PWM control functions (for motor control)
+void TIM3_enable_PWM(uint32_t Channel) {
+    LL_TIM_CC_EnableChannel(TIM3, Channel);
+}
+
+void TIM3_disable_PWM(uint32_t Channel) {
+    LL_TIM_CC_DisableChannel(TIM3, Channel);
+}
+
+// Set PWM duty cycle for motor control (0-100%)
+void TIM3_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle)
+{
+    // Assuming DutyCycle is in percentage (0-100)
+    if (DutyCycle > 100) {
+        DutyCycle = 100; // Clamp to 100%
+    }
+    uint32_t compare_value = (DutyCycle * (LL_TIM_GetAutoReload(TIM3) + 1)) / 100;
+    switch (Channel) {
+        case LL_TIM_CHANNEL_CH1:
+            LL_TIM_OC_SetCompareCH1(TIM3, compare_value);
+            break;
+        case LL_TIM_CHANNEL_CH2:
+            LL_TIM_OC_SetCompareCH2(TIM3, compare_value);
+            break;
+        case LL_TIM_CHANNEL_CH3:
+            LL_TIM_OC_SetCompareCH3(TIM3, compare_value);
+            break;
+        case LL_TIM_CHANNEL_CH4:
+            LL_TIM_OC_SetCompareCH4(TIM3, compare_value);
+        default:
+            return; // Invalid channel
+    }
+}
 /* USER CODE END 1 */

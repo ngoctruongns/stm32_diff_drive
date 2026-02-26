@@ -50,6 +50,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stddef.h>
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -77,6 +79,10 @@ void input_capture_tim3_cc2_handler(uint32_t captured_value);
 void adc1_interrupt_handler(uint16_t adc_value);
 void usart2_interrupt_handler(uint8_t data);
 void tim7_interrupt_handler(void);
+void sys_tick_handler(void);
+uint64_t get_us_tick_count(void);
+uint32_t get_ms_tick_count(void);
+void delay_us(uint32_t us);
 
 /* USER CODE END EFP */
 
@@ -107,7 +113,7 @@ void tim7_interrupt_handler(void);
 #define L298_IN2_GPIO_Port GPIOC
 #define CLK_IN_Pin LL_GPIO_PIN_10
 #define CLK_IN_GPIO_Port GPIOB
-#define SPI2_CS_Pin LL_GPIO_PIN_14
+#define SPI2_CS_Pin LL_GPIO_PIN_12
 #define SPI2_CS_GPIO_Port GPIOB
 #define L298_IN3_Pin LL_GPIO_PIN_9
 #define L298_IN3_GPIO_Port GPIOD

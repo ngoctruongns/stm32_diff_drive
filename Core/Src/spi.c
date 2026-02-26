@@ -117,21 +117,53 @@ void MX_SPI2_Init(void)
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
   SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_8BIT;
-  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_1EDGE;
+  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_HIGH;
+  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_2EDGE;
   SPI_InitStruct.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV2;
-  SPI_InitStruct.BitOrder = LL_SPI_MSB_FIRST;
+  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV256;
+  SPI_InitStruct.BitOrder = LL_SPI_LSB_FIRST;
   SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI2, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
   /* USER CODE BEGIN SPI2_Init 2 */
-
+    // Enable SPI2
+    LL_SPI_Enable(SPI2);
   /* USER CODE END SPI2_Init 2 */
 
 }
 
 /* USER CODE BEGIN 1 */
+
+// API for SPI transfer and receive one byte functions
+uint8_t SPIx_transferOneByte(SPI_TypeDef *spi, uint8_t data)
+{
+    while (LL_SPI_IsActiveFlag_TXE(spi) == 0);
+    LL_SPI_TransmitData8(spi, data);
+    while (LL_SPI_IsActiveFlag_RXNE(spi) == 0);
+    return LL_SPI_ReceiveData8(spi);
+}
+
+// API for SPI only transmit (discard received data)
+void SPIx_transmitBuffer(SPI_TypeDef *spi, const uint8_t *data, uint16_t len)
+{
+    if (data == NULL || len == 0)
+        return;
+
+    for (uint16_t i = 0; i < len; ++i) {
+        SPIx_transferOneByte(spi, data[i]);
+    }
+}
+
+// API for SPI only receive (send dummy bytes)
+void SPIx_receiveBuffer(SPI_TypeDef *spi, uint8_t *buf, uint16_t len)
+{
+    if (buf == NULL || len == 0)
+        return;
+
+    for (uint16_t i = 0; i < len; ++i) {
+        buf[i] = SPIx_transferOneByte(spi, 0xFF);
+    }
+}
 
 /* USER CODE END 1 */
