@@ -117,10 +117,6 @@ void MX_TIM2_Init(void)
   LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_RESET);
   LL_TIM_DisableMasterSlaveMode(TIM2);
   /* USER CODE BEGIN TIM2_Init 2 */
-    // Reset counter
-    LL_TIM_SetCounter(TIM2, 0);
-    // Start TIM2 counter
-    LL_TIM_EnableCounter(TIM2);
 
   /* USER CODE END TIM2_Init 2 */
 
@@ -170,12 +166,6 @@ void MX_TIM3_Init(void)
   LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_RESET);
   LL_TIM_DisableMasterSlaveMode(TIM3);
   /* USER CODE BEGIN TIM3_Init 2 */
-    // Start TIM3 in PWM mode
-    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH3);
-    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH3);
-    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH2);
-    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH1);
-    LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH4);
     LL_TIM_EnableCounter(TIM3);
 
   /* USER CODE END TIM3_Init 2 */
@@ -297,16 +287,42 @@ void MX_TIM7_Init(void)
   /* USER CODE END TIM7_Init 2 */
 
 }
+/* TIM10 init function */
+void MX_TIM10_Init(void)
+{
+
+  /* USER CODE BEGIN TIM10_Init 0 */
+
+  /* USER CODE END TIM10_Init 0 */
+
+  LL_TIM_InitTypeDef TIM_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM10);
+
+  /* TIM10 interrupt Init */
+  NVIC_SetPriority(TIM1_UP_TIM10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+
+  /* USER CODE BEGIN TIM10_Init 1 */
+
+  /* USER CODE END TIM10_Init 1 */
+  TIM_InitStruct.Prescaler = 83;
+  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+  TIM_InitStruct.Autoreload = 5000;
+  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  LL_TIM_Init(TIM10, &TIM_InitStruct);
+  LL_TIM_DisableARRPreload(TIM10);
+  /* USER CODE BEGIN TIM10_Init 2 */
+
+  // Enable update interrupt
+    LL_TIM_EnableIT_UPDATE(TIM10);
+
+  /* USER CODE END TIM10_Init 2 */
+
+}
 
 /* USER CODE BEGIN 1 */
-
-void TIM4_enable_PWM(uint32_t Channel) {
-    LL_TIM_CC_EnableChannel(TIM4, Channel);
-}
-
-void TIM4_disable_PWM(uint32_t Channel) {
-    LL_TIM_CC_DisableChannel(TIM4, Channel);
-}
 
 // Timer4 set PWM duty cycle
 void TIM4_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle) {
@@ -335,7 +351,7 @@ void Servo_Init(void) {
     // Enable PWM on the specified channel
     for (int i = 0; i < SERVO_MAX_ID; i++) {
         Servo_Config* config = servo_configs[i];
-        TIM4_enable_PWM(config->timer_channel);
+        TIMx_enablePWM(TIM4, config->timer_channel);
     }
 }
 
@@ -362,40 +378,40 @@ void Servo_setAngle(Servo_ID servo_id, int16_t angle) {
     TIM4_Set_PWM_DutyCycle(config->timer_channel, pulse_width);
 }
 
-int32_t Encoder_GetCount(void)
+int32_t Encoder_GetCount(TIM_TypeDef *tim)
 {
-    return (int32_t)LL_TIM_GetCounter(TIM2);
+    return (int32_t)LL_TIM_GetCounter(tim);
 }
 
 // Timer3 PWM control functions (for motor control)
-void TIM3_enable_PWM(uint32_t Channel) {
-    LL_TIM_CC_EnableChannel(TIM3, Channel);
+void TIMx_enable_PWM(TIM_TypeDef *tim, uint32_t Channel) {
+    LL_TIM_CC_EnableChannel(tim, Channel);
 }
 
-void TIM3_disable_PWM(uint32_t Channel) {
-    LL_TIM_CC_DisableChannel(TIM3, Channel);
+void TIMx_disable_PWM(TIM_TypeDef *tim, uint32_t Channel) {
+    LL_TIM_CC_DisableChannel(tim, Channel);
 }
 
-// Set PWM duty cycle for motor control (0-100%)
-void TIM3_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle)
+// Set PWM for Timer
+void TIMx_setPWM(TIM_TypeDef *tim, uint32_t channel, uint32_t pwm)
 {
-    // Assuming DutyCycle is in percentage (0-100)
-    if (DutyCycle > 100) {
-        DutyCycle = 100; // Clamp to 100%
+    uint32_t pwm_max = (LL_TIM_GetAutoReload(tim) + 1);
+    if (pwm > pwm_max) {
+        pwm = pwm_max;
     }
-    uint32_t compare_value = (DutyCycle * (LL_TIM_GetAutoReload(TIM3) + 1)) / 100;
-    switch (Channel) {
+
+    switch (channel) {
         case LL_TIM_CHANNEL_CH1:
-            LL_TIM_OC_SetCompareCH1(TIM3, compare_value);
+            LL_TIM_OC_SetCompareCH1(tim, pwm);
             break;
         case LL_TIM_CHANNEL_CH2:
-            LL_TIM_OC_SetCompareCH2(TIM3, compare_value);
+            LL_TIM_OC_SetCompareCH2(tim, pwm);
             break;
         case LL_TIM_CHANNEL_CH3:
-            LL_TIM_OC_SetCompareCH3(TIM3, compare_value);
+            LL_TIM_OC_SetCompareCH3(tim, pwm);
             break;
         case LL_TIM_CHANNEL_CH4:
-            LL_TIM_OC_SetCompareCH4(TIM3, compare_value);
+            LL_TIM_OC_SetCompareCH4(tim, pwm);
         default:
             return; // Invalid channel
     }

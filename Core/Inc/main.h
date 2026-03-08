@@ -79,6 +79,7 @@ void input_capture_tim3_cc2_handler(uint32_t captured_value);
 void adc1_interrupt_handler(uint16_t adc_value);
 void usart2_interrupt_handler(uint8_t data);
 void tim7_interrupt_handler(void);
+void tim10_interrupt_handler(void);
 void sys_tick_handler(void);
 uint64_t get_us_tick_count(void);
 uint32_t get_ms_tick_count(void);

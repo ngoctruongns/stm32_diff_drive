@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include "PS2X_lib.h"
 #include "log_helper.h"
+#include "diff_drive.h"
 
 /* USER CODE END Includes */
 
@@ -157,9 +158,18 @@ void tim7_interrupt_handler(void)
     // Toggle LED LD3
     LL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-    // Get encoder count from TIM2
-    encoder_count = Encoder_GetCount();
-    // printf("Encoder Count: %ld, ADC Value: %d\r\n", encoder_count, adc_value);
+    // // Printf encoder
+    // encoder_count = getEncoderCount(MOTOR_L);
+    // LOG_DBG("Left Encoder Count: %ld\r\n", encoder_count);
+    // encoder_count = getEncoderCount(MOTOR_R);
+    // LOG_DBG("Right Encoder Count: %ld\r\n", encoder_count);
+}
+
+// Tim10 interrupt for control motor with PID at 100 Hz
+void tim10_interrupt_handler(void)
+{
+    // Update motor control loop
+    diff_drive_update(0.01f); // dt = 0.01s for 100 Hz update rate
 }
 
 void sys_tick_handler(void)
@@ -236,15 +246,13 @@ int main(void)
   MX_TIM7_Init();
   MX_USART2_UART_Init();
   MX_SPI2_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
     // Initialize servos
     // Servo_Init();
 
-    // Enable PWM output for timer 3 with frequency 1 kHz (for motor control)
-    TIM3_enable_PWM(MOTOR_PWM1);
-    TIM3_enable_PWM(MOTOR_PWM2);
-    TIM3_enable_PWM(MOTOR_PWM3);
-    TIM3_enable_PWM(MOTOR_PWM4);
+    // Initialize system
+    diff_drive_init();
 
     // Enable interrupts after setup
     __enable_irq();
@@ -255,7 +263,7 @@ int main(void)
     // ADC1_triggerConvert();
 
     // Set log level
-    set_log_level(LOG_LEVEL_DBG);
+    set_log_level(LOG_LEVEL_INF);
 
     // Init PS2X
     for (int i =0; i<10; i++)
@@ -269,6 +277,9 @@ int main(void)
             LOG_ERR("Failed to Initialize PS2X Controller\r\n");
         }
     }
+
+    // Set robot velocity (move forward at 0.5 m/s)
+    diff_drive_set_velocity(0.2f, 0.0f);
 
   while (1)
   {
@@ -310,25 +321,50 @@ int main(void)
     // Set 4 channels PWM duty cycle based on ADC value (for motor control)
     // Fake ADC value for testing
     // adc_value = 2048; // Midpoint value for testing (50% duty cycle)
-    uint32_t duty_cycle = (adc_value * 100) / 4095; // Convert ADC value to percentage
-    TIM3_Set_PWM_DutyCycle(MOTOR_PWM1, duty_cycle);
-    TIM3_Set_PWM_DutyCycle(MOTOR_PWM2, duty_cycle);
-    TIM3_Set_PWM_DutyCycle(MOTOR_PWM3, duty_cycle);
-    TIM3_Set_PWM_DutyCycle(MOTOR_PWM4, duty_cycle);
+    float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
+    // int duty_int = (int)duty_cycle;
+    // int duty_frac = (int)((duty_cycle - duty_int) * 100);
+    // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
+
+    if (duty_cycle < 5.0) {
+        // Stop robot
+        diff_drive_stop();
+    } else {
+        // Set robot velocity based on duty cycle (0.5 m/s max)
+        float linear_vel = (duty_cycle / 100.0f) * MAX_LINEAR_VEL; // Scale to max speed
+        diff_drive_set_velocity(linear_vel, 0.0f);                 // Move forward with no rotation
+        // int _int = (int)linear_vel;
+        // int _frac = (int)((linear_vel - _int) * 100);
+        // printf("Linear Velocity: %d.%02d m/s\n", _int, _frac);
+
+        // Get target RPM for debugging
+        // float target_rpm = getTargetRPM(MOTOR_L);
+        // printf("target_rpm: %d,", (int)target_rpm);
+
+        float target_rpm = getTargetRPM(MOTOR_R);
+        printf("target_rpm: %d,", (int)target_rpm);
+
+        // Get velocity from encoders for debugging
+        // float curr_rpm = getCurrentRPM(MOTOR_L);
+        // printf("current_rpm: %d\r\n", (int)curr_rpm);
+
+        float curr_rpm = getCurrentRPM(MOTOR_R);
+        printf("current_rpm: %d\r\n", (int)curr_rpm);
+    }
 
     // Read PS2 controller state and print button states
     ps2x_read_gamepad();
-    // Get data from PS2X and print for debugging
-    PS2X_State ps2_state = ps2x_getAllData();
-    printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
-    printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
-    printf("Joystick Right: X=%d Y=%d\r\n", ps2_state.rx, ps2_state.ry);
-    if (ps2_state.btn1.up == PS2X_BTN_ACTIVE) {
-        printf("Up button is pressed\r\n");
-    }
+    // // Get data from PS2X and print for debugging
+    // PS2X_State ps2_state = ps2x_getAllData();
 
-    LL_mDelay(500);
+    // printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
+    // printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
+    // printf("Joystick Right: X=%d Y=%d\r\n", ps2_state.rx, ps2_state.ry);
+    // if (ps2_state.btn1.up == PS2X_BTN_ACTIVE) {
+    //     printf("Up button is pressed\r\n");
+    // }
 
+    LL_mDelay(50);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

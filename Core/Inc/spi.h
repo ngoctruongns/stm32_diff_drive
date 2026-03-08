@@ -50,3 +50,4 @@ void SPIx_receiveBuffer(SPI_TypeDef *spi, uint8_t *buf, uint16_t len);
 #endif
 
 #endif /* __SPI_H__ */
+

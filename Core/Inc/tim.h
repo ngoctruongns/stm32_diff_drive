@@ -61,18 +61,17 @@ void MX_TIM2_Init(void);
 void MX_TIM3_Init(void);
 void MX_TIM5_Init(void);
 void MX_TIM7_Init(void);
+void MX_TIM10_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
 /* TIM4 PWM Control Functions  */
-void TIM4_enable_PWM(uint32_t Channel);
-void TIM4_disable_PWM(uint32_t Channel);
 void TIM4_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle);
 
-// TIM3 PWM Control Functions (for motor control)
-void TIM3_enable_PWM(uint32_t Channel);
-void TIM3_disable_PWM(uint32_t Channel);
-void TIM3_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle);
+// TIMx PWM Control Functions
+void TIMx_enablePWM(TIM_TypeDef *tim, uint32_t Channel);
+void TIMx_disablePWM(TIM_TypeDef *tim, uint32_t Channel);
+void TIMx_setPWM(TIM_TypeDef *tim, uint32_t channel, uint32_t pwm);
 /* Servo Control Functions */
 // Control servo motor (0-180 degrees)
 // PWM frequency: 50Hz
@@ -80,7 +79,7 @@ void TIM3_Set_PWM_DutyCycle(uint32_t Channel, uint32_t DutyCycle);
 void Servo_Init(void);
 void Servo_setAngle(Servo_ID servo_id, int16_t angle);
 
-int32_t Encoder_GetCount(void);
+int32_t Encoder_GetCount(TIM_TypeDef *tim);
 
 /* USER CODE END Prototypes */
 
@@ -89,4 +88,3 @@ int32_t Encoder_GetCount(void);
 #endif
 
 #endif /* __TIM_H__ */
-
