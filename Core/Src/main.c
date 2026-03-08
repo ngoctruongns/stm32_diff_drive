@@ -278,9 +278,6 @@ int main(void)
         }
     }
 
-    // Set robot velocity (move forward at 0.5 m/s)
-    diff_drive_set_velocity(0.2f, 0.0f);
-
   while (1)
   {
     // // Rotate servo1 from 0 to 180 degrees
@@ -318,50 +315,79 @@ int main(void)
     // Servo_setAngle(SERVO1, angle);
     // LL_mDelay(300);
 
-    // Set 4 channels PWM duty cycle based on ADC value (for motor control)
-    // Fake ADC value for testing
-    // adc_value = 2048; // Midpoint value for testing (50% duty cycle)
-    float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
-    // int duty_int = (int)duty_cycle;
-    // int duty_frac = (int)((duty_cycle - duty_int) * 100);
-    // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
-
-    if (duty_cycle < 5.0) {
-        // Stop robot
-        diff_drive_stop();
-    } else {
-        // Set robot velocity based on duty cycle (0.5 m/s max)
-        float linear_vel = (duty_cycle / 100.0f) * MAX_LINEAR_VEL; // Scale to max speed
-        diff_drive_set_velocity(linear_vel, 0.0f);                 // Move forward with no rotation
-        // int _int = (int)linear_vel;
-        // int _frac = (int)((linear_vel - _int) * 100);
-        // printf("Linear Velocity: %d.%02d m/s\n", _int, _frac);
-
-        // Get target RPM for debugging
-        // float target_rpm = getTargetRPM(MOTOR_L);
-        // printf("target_rpm: %d,", (int)target_rpm);
-
-        float target_rpm = getTargetRPM(MOTOR_R);
-        printf("target_rpm: %d,", (int)target_rpm);
-
-        // Get velocity from encoders for debugging
-        // float curr_rpm = getCurrentRPM(MOTOR_L);
-        // printf("current_rpm: %d\r\n", (int)curr_rpm);
-
-        float curr_rpm = getCurrentRPM(MOTOR_R);
-        printf("current_rpm: %d\r\n", (int)curr_rpm);
-    }
+    float linear_vel = 0.0f;
+    float angular_vel = 0.0f;
 
     // Read PS2 controller state and print button states
     ps2x_read_gamepad();
-    // // Get data from PS2X and print for debugging
-    // PS2X_State ps2_state = ps2x_getAllData();
+    // Get data from PS2X and print for debugging
+    PS2X_State ps2_state = ps2x_getAllData();
+
+    // Check button l1,r1 or l2, r2 is pressed to allow control robot
+    if (ps2_state.btn2.l1 == PS2X_BTN_ACTIVE || ps2_state.btn2.r1 == PS2X_BTN_ACTIVE ||
+        ps2_state.btn2.l2 == PS2X_BTN_ACTIVE || ps2_state.btn2.r2 == PS2X_BTN_ACTIVE) {
+
+            // Get joystick Left Y used for linear velocity control
+        int16_t ly = 127 - ps2_state.ly; // Range: 0-255, 127 is center
+        // Map ly to linear velocity (-0.3 to 0.3 m/s)
+        linear_vel = ((float)ly / 128.0f) * MAX_LINEAR_VEL;
+        if (linear_vel < 0.05f && linear_vel > -0.05f) {
+            linear_vel = 0.0f; // Deadzone for joystick
+        }
+
+        // Get joystick Right X used for angular velocity control
+        int16_t rx = 128 - ps2_state.rx; // Range: 0-255, 128 is center
+        // Map rx to angular velocity (-1.0 to 1.0 rad/s)
+        angular_vel = ((float)rx / 128.0f) * MAX_ANGULAR_VEL;
+        if (angular_vel < 0.1f && angular_vel > -0.1f) {
+            angular_vel = 0.0f; // Deadzone for joystick
+        }
+
+        // Printf LY and RX for debugging
+        printf("Joystick LY: %d, RX: %d\r\n", ly, rx);
+
+
+        // Get target RPM for debugging
+        float target_rpm = getTargetRPM(MOTOR_L);
+        float curr_rpm = getCurrentRPM(MOTOR_L);
+        printf("left_rpm: %d -> %d\r\n",  (int)target_rpm, (int)curr_rpm);
+
+        target_rpm = getTargetRPM(MOTOR_R);
+        curr_rpm = getCurrentRPM(MOTOR_R);
+        printf("right_rpm: %d -> %d\r\n",  (int)target_rpm, (int)curr_rpm);
+    }
+
+    // Set robot velocity based on joystick input
+    diff_drive_set_velocity(linear_vel, angular_vel);
 
     // printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
     // printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
     // printf("Joystick Right: X=%d Y=%d\r\n", ps2_state.rx, ps2_state.ry);
     // if (ps2_state.btn1.up == PS2X_BTN_ACTIVE) {
     //     printf("Up button is pressed\r\n");
+    // }
+
+
+    // Set 4 channels PWM duty cycle based on ADC value (for motor control)
+    // Fake ADC value for testing
+    // adc_value = 2048; // Midpoint value for testing (50% duty cycle)
+    // float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
+    // int duty_int = (int)duty_cycle;
+    // int duty_frac = (int)((duty_cycle - duty_int) * 100);
+    // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
+
+    // if (duty_cycle < 5.0) {
+    //     // Stop robot
+    //     diff_drive_stop();
+    // } else {
+    //     // Set robot velocity based on duty cycle (0.5 m/s max)
+    //     float linear_vel = (duty_cycle / 100.0f) * MAX_LINEAR_VEL; // Scale to max speed
+    //     diff_drive_set_velocity(linear_vel, 0.0f);                 // Move forward with no rotation
+    //     // int _int = (int)linear_vel;
+    //     // int _frac = (int)((linear_vel - _int) * 100);
+    //     // printf("Linear Velocity: %d.%02d m/s\n", _int, _frac);
+
+
     // }
 
     LL_mDelay(50);
