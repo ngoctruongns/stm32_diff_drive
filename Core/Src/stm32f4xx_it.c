@@ -20,6 +20,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
+
+/* USART2 handler prototype in main.c */
+extern void usart2_interrupt_handler(uint8_t data);
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -257,7 +261,16 @@ void TIM2_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+  if (LL_USART_IsActiveFlag_RXNE(USART2)) {
+    uint8_t data = LL_USART_ReceiveData8(USART2);
+    usart2_interrupt_handler(data);
+    // RXNE flag is cleared by reading USART_RDR
+  }
 
+  if (LL_USART_IsActiveFlag_ORE(USART2)) {
+    // Overrun occurred, clear
+    LL_USART_ClearFlag_ORE(USART2);
+  }
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 

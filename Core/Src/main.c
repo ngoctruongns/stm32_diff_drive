@@ -28,9 +28,12 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 #include "PS2X_lib.h"
 #include "log_helper.h"
 #include "diff_drive.h"
+#include "string_helper.h"
 
 /* USER CODE END Includes */
 
@@ -62,6 +65,10 @@ float temperature;
 char usart_buffer[50];
 int32_t encoder_count = 0;
 uint32_t ms_tick_count = 0;
+
+#define PID_CMD_BUFFER_LEN 128
+static char pid_rx_buffer[PID_CMD_BUFFER_LEN];
+static uint16_t pid_rx_index = 0;
 
 /* USER CODE END PV */
 
@@ -144,10 +151,47 @@ float ADC_readTemperature(uint16_t adc_raw)
     return temperature;
 }
 
+static void process_pid_command(const char *cmd)
+{
+    float kp, ki, kd;
+    if (parse_pid_command(cmd, &kp, &ki, &kd)) {
+        diff_drive_set_pid(kp, ki, kd);
+        printf("PID update success!\r\n");
+    } else {
+        if (cmd != NULL && cmd[0] != '\0') {
+            printf("PID parse error: '%s'\r\n", cmd);
+        }
+    }
+}
+
 void usart2_interrupt_handler(uint8_t data)
 {
-    // Echo received data back
+    // Echo received data immediately
     USART2_sendChar(data);
+
+    if (data == '\r') {
+        // ignore CR, parse on LF
+        return;
+    }
+
+    if (data == '\n') {
+        // complete command detected
+        pid_rx_buffer[pid_rx_index] = '\0';
+        if (pid_rx_index > 0) {
+            process_pid_command(pid_rx_buffer);
+        }
+        pid_rx_index = 0;
+        return;
+    }
+
+    if (pid_rx_index < PID_CMD_BUFFER_LEN - 1) {
+        pid_rx_buffer[pid_rx_index++] = (char)data;
+    } else {
+        // overflow, reset buffer to avoid hang
+        pid_rx_index = 0;
+        memset(pid_rx_buffer, 0, PID_CMD_BUFFER_LEN);
+        printf("PID buffer overflow\r\n");
+    }
 }
 
 void tim7_interrupt_handler(void)
