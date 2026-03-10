@@ -112,6 +112,8 @@ void delay_us(uint32_t us);
 #define L298_IN1_GPIO_Port GPIOC
 #define L298_IN2_Pin LL_GPIO_PIN_5
 #define L298_IN2_GPIO_Port GPIOC
+#define PID_CLK_Pin LL_GPIO_PIN_7
+#define PID_CLK_GPIO_Port GPIOE
 #define CLK_IN_Pin LL_GPIO_PIN_10
 #define CLK_IN_GPIO_Port GPIOB
 #define SPI2_CS_Pin LL_GPIO_PIN_12

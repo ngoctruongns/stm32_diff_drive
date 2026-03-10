@@ -169,7 +169,9 @@ void tim7_interrupt_handler(void)
 void tim10_interrupt_handler(void)
 {
     // Update motor control loop
-    diff_drive_update(0.01f); // dt = 0.01s for 100 Hz update rate
+    diff_drive_update(); // 100 Hz update rate
+    // Toggle PID_CLK pin for debugging with oscilloscope
+    LL_GPIO_TogglePin(PID_CLK_GPIO_Port, PID_CLK_Pin);
 }
 
 void sys_tick_handler(void)
@@ -358,7 +360,7 @@ int main(void)
     }
 
     // Set robot velocity based on joystick input
-    diff_drive_set_velocity(linear_vel, angular_vel);
+    // diff_drive_set_velocity(linear_vel, angular_vel);
 
     // printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
     // printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
@@ -367,14 +369,16 @@ int main(void)
     //     printf("Up button is pressed\r\n");
     // }
 
-
-    // Set 4 channels PWM duty cycle based on ADC value (for motor control)
-    // Fake ADC value for testing
-    // adc_value = 2048; // Midpoint value for testing (50% duty cycle)
-    // float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
+    float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
     // int duty_int = (int)duty_cycle;
     // int duty_frac = (int)((duty_cycle - duty_int) * 100);
     // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
+
+    // Set RPM for motors left according to ADC valueto test PID control
+    setMotorRPM(MOTOR_L, duty_cycle * 2);
+    float target_rpm = getTargetRPM(MOTOR_L);
+    float curr_rpm = getCurrentRPM(MOTOR_L);
+    printf("set:%d, curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
 
     // if (duty_cycle < 5.0) {
     //     // Stop robot
@@ -386,8 +390,6 @@ int main(void)
     //     // int _int = (int)linear_vel;
     //     // int _frac = (int)((linear_vel - _int) * 100);
     //     // printf("Linear Velocity: %d.%02d m/s\n", _int, _frac);
-
-
     // }
 
     LL_mDelay(50);

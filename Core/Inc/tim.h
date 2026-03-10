@@ -88,3 +88,4 @@ int32_t Encoder_GetCount(TIM_TypeDef *tim);
 #endif
 
 #endif /* __TIM_H__ */
+
