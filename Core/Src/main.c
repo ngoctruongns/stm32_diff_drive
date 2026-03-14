@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
@@ -34,6 +35,7 @@
 #include "log_helper.h"
 #include "diff_drive.h"
 #include "string_helper.h"
+#include "ws2812.h"
 
 /* USER CODE END Includes */
 
@@ -283,6 +285,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_ADC1_Init();
@@ -293,12 +296,14 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI2_Init();
   MX_TIM10_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
     // Initialize servos
     // Servo_Init();
 
     // Initialize system
     diff_drive_init();
+    WS2812_Init();
 
     // Enable interrupts after setup
     __enable_irq();
@@ -310,10 +315,14 @@ int main(void)
 
     // Set log level
     set_log_level(LOG_LEVEL_INF);
+    // set_log_level(LOG_LEVEL_DBG);
+
+    // Set LED to solid red
+    WS2812_SetSolidColor(LED_RED);
+    // TODO: Set Buzzer
 
     // Init PS2X
-    for (int i =0; i<10; i++)
-    {
+    for (int i = 0; i < 10; i++) {
 
         if (ps2x_init() == PS2X_SUCCESS) {
             // ps2x_config_mode(PS2X_MODE_PRESSURES);
@@ -324,8 +333,25 @@ int main(void)
         }
     }
 
+    LL_mDelay(300);
+    // Set LED to solid red
+    // WS2812_SetBlink(LED_BLUE, 200);
+
+    // Test LED rainbow pattern
+    WS2812_SetRainbow(100); // 1 second period for full rainbow cycle
+    // Test LED breathing effect
+    // WS2812_SetBreath(LED_BLUE, 6000); // 3 second period for full breath cycle
+
   while (1)
   {
+    // Handle LED patterns
+    WS2812_loopControl();
+
+    if (ms_tick_count > 25000) {
+        WS2812_SetBreath(LED_BLUE, 6000);
+    }
+
+
     // // Rotate servo1 from 0 to 180 degrees
     // for (int16_t angle = 0; angle <= 180; angle += 1) {
     //     Servo_setAngle(SERVO1, angle);
@@ -390,21 +416,21 @@ int main(void)
         }
 
         // Printf LY and RX for debugging
-        printf("Joystick LY: %d, RX: %d\r\n", ly, rx);
+        printf("LY:%d,RX:%d\r\n", ly, rx);
 
 
         // Get target RPM for debugging
         float target_rpm = getTargetRPM(MOTOR_L);
         float curr_rpm = getCurrentRPM(MOTOR_L);
-        printf("left_rpm: %d -> %d\r\n",  (int)target_rpm, (int)curr_rpm);
+        printf("l_sp:%d,l_curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
 
         target_rpm = getTargetRPM(MOTOR_R);
         curr_rpm = getCurrentRPM(MOTOR_R);
-        printf("right_rpm: %d -> %d\r\n",  (int)target_rpm, (int)curr_rpm);
+        // printf("r_sp:%d,r_curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
     }
 
     // Set robot velocity based on joystick input
-    // diff_drive_set_velocity(linear_vel, angular_vel);
+    diff_drive_set_velocity(linear_vel, angular_vel);
 
     // printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
     // printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
@@ -413,16 +439,16 @@ int main(void)
     //     printf("Up button is pressed\r\n");
     // }
 
-    float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
+    // float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
     // int duty_int = (int)duty_cycle;
     // int duty_frac = (int)((duty_cycle - duty_int) * 100);
     // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
 
-    // Set RPM for motors left according to ADC valueto test PID control
-    setMotorRPM(MOTOR_L, duty_cycle * 2);
-    float target_rpm = getTargetRPM(MOTOR_L);
-    float curr_rpm = getCurrentRPM(MOTOR_L);
-    printf("set:%d, curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
+    // // Set RPM for motors left according to ADC valueto test PID control
+    // setMotorRPM(MOTOR_L, duty_cycle * 2);
+    // float target_rpm = getTargetRPM(MOTOR_L);
+    // float curr_rpm = getCurrentRPM(MOTOR_L);
+    // printf("set:%d, curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
 
     // if (duty_cycle < 5.0) {
     //     // Stop robot
