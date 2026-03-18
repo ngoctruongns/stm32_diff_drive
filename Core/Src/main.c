@@ -29,13 +29,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include "PS2X_lib.h"
-#include "log_helper.h"
-#include "diff_drive.h"
-#include "string_helper.h"
-#include "ws2812.h"
+#include "peri_control.h"
+#include "uart_lib.h"
 
 /* USER CODE END Includes */
 
@@ -62,15 +57,7 @@ uint32_t last_capture = 0;
 uint32_t duty_cycle = 0;
 uint32_t pulse_width = 0;
 uint16_t adc_value;
-int16_t angle;
-float temperature;
-char usart_buffer[50];
-int32_t encoder_count = 0;
 uint32_t ms_tick_count = 0;
-
-#define PID_CMD_BUFFER_LEN 128
-static char pid_rx_buffer[PID_CMD_BUFFER_LEN];
-static uint16_t pid_rx_index = 0;
 
 /* USER CODE END PV */
 
@@ -153,49 +140,6 @@ float ADC_readTemperature(uint16_t adc_raw)
     return temperature;
 }
 
-static void process_pid_command(const char *cmd)
-{
-    float kp, ki, kd;
-    if (parse_pid_command(cmd, &kp, &ki, &kd)) {
-        diff_drive_set_pid(kp, ki, kd);
-        printf("PID update success!\r\n");
-    } else {
-        if (cmd != NULL && cmd[0] != '\0') {
-            printf("PID parse error: '%s'\r\n", cmd);
-        }
-    }
-}
-
-void usart2_interrupt_handler(uint8_t data)
-{
-    // Echo received data immediately
-    USART2_sendChar(data);
-
-    if (data == '\r') {
-        // ignore CR, parse on LF
-        return;
-    }
-
-    if (data == '\n') {
-        // complete command detected
-        pid_rx_buffer[pid_rx_index] = '\0';
-        if (pid_rx_index > 0) {
-            process_pid_command(pid_rx_buffer);
-        }
-        pid_rx_index = 0;
-        return;
-    }
-
-    if (pid_rx_index < PID_CMD_BUFFER_LEN - 1) {
-        pid_rx_buffer[pid_rx_index++] = (char)data;
-    } else {
-        // overflow, reset buffer to avoid hang
-        pid_rx_index = 0;
-        memset(pid_rx_buffer, 0, PID_CMD_BUFFER_LEN);
-        printf("PID buffer overflow\r\n");
-    }
-}
-
 void tim7_interrupt_handler(void)
 {
     // Trigger ADC conversion
@@ -214,10 +158,7 @@ void tim7_interrupt_handler(void)
 // Tim10 interrupt for control motor with PID at 100 Hz
 void tim10_interrupt_handler(void)
 {
-    // Update motor control loop
-    diff_drive_update(); // 100 Hz update rate
-    // Toggle PID_CLK pin for debugging with oscilloscope
-    LL_GPIO_TogglePin(PID_CLK_GPIO_Port, PID_CLK_Pin);
+  peripheral_tim10_interrupt_handler();
 }
 
 void sys_tick_handler(void)
@@ -297,13 +238,11 @@ int main(void)
   MX_SPI2_Init();
   MX_TIM10_Init();
   MX_TIM1_Init();
+  MX_USART3_UART_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
-    // Initialize servos
-    // Servo_Init();
-
-    // Initialize system
-    diff_drive_init();
-    WS2812_Init();
+    peripheral_init();
+    uart3_comm_init();
 
     // Enable interrupts after setup
     __enable_irq();
@@ -311,158 +250,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-    // ADC1_triggerConvert();
-
-    // Set log level
-    set_log_level(LOG_LEVEL_INF);
-    // set_log_level(LOG_LEVEL_DBG);
-
-    // Set LED to solid red
-    WS2812_SetSolidColor(LED_RED);
-    // TODO: Set Buzzer
-
-    // Init PS2X
-    for (int i = 0; i < 10; i++) {
-
-        if (ps2x_init() == PS2X_SUCCESS) {
-            // ps2x_config_mode(PS2X_MODE_PRESSURES);
-            LOG_DBG("PS2X Controller Initialized Successfully\r\n");
-            break;
-        } else if (i == 9) {
-            LOG_ERR("Failed to Initialize PS2X Controller\r\n");
-        }
-    }
-
-    LL_mDelay(300);
-    // Set LED to solid red
-    // WS2812_SetBlink(LED_BLUE, 200);
-
-    // Test LED rainbow pattern
-    WS2812_SetRainbow(100); // 1 second period for full rainbow cycle
-    // Test LED breathing effect
-    // WS2812_SetBreath(LED_BLUE, 6000); // 3 second period for full breath cycle
-
   while (1)
   {
-    // Handle LED patterns
-    WS2812_loopControl();
-
-    if (ms_tick_count > 25000) {
-        WS2812_SetBreath(LED_BLUE, 6000);
-    }
-
-
-    // // Rotate servo1 from 0 to 180 degrees
-    // for (int16_t angle = 0; angle <= 180; angle += 1) {
-    //     Servo_setAngle(SERVO1, angle);
-    //     LL_mDelay(5);
-    // }
-
-    // LL_mDelay(500);
-
-    // // Rotate servo1 from 180 to 0 degrees
-    // for (int16_t angle = 180; angle >= 0; angle -= 1) {
-    //     Servo_setAngle(SERVO1, angle);
-    //     LL_mDelay(5);
-    // }
-    // LL_mDelay(500);
-
-    /* Read ADC value */
-
-    // // Mode1: Independent mode
-    // ADC1_triggerConvert();
-    // adc_value = ADC1_readValue();
-
-    // // Convert ADC value to temperature in Celsius when using internal temperature sensor
-    // temperature = ADC_readTemperature(adc_value);
-    // printf("ADC Value: %d, Temperature: %d C\r\n", adc_value, (int)temperature);
-
-    // Send adc value to USART2
-    // sprintf(usart_buffer, "ADC Value: %d\r\n", adc_value);
-    // USART2_sendString(usart_buffer);
-    // USART2_Transmit(usart_buffer, strlen(usart_buffer));
-
-    // // convert ADC to angle (0-180)
-    // angle = (adc_value * 180) / 4095;
-    // Servo_setAngle(SERVO1, angle);
-    // LL_mDelay(300);
-
-    float linear_vel = 0.0f;
-    float angular_vel = 0.0f;
-
-    // Read PS2 controller state and print button states
-    ps2x_read_gamepad();
-    // Get data from PS2X and print for debugging
-    PS2X_State ps2_state = ps2x_getAllData();
-
-    // Check button l1,r1 or l2, r2 is pressed to allow control robot
-    if (ps2_state.btn2.l1 == PS2X_BTN_ACTIVE || ps2_state.btn2.r1 == PS2X_BTN_ACTIVE ||
-        ps2_state.btn2.l2 == PS2X_BTN_ACTIVE || ps2_state.btn2.r2 == PS2X_BTN_ACTIVE) {
-
-            // Get joystick Left Y used for linear velocity control
-        int16_t ly = 127 - ps2_state.ly; // Range: 0-255, 127 is center
-        // Map ly to linear velocity (-0.3 to 0.3 m/s)
-        linear_vel = ((float)ly / 128.0f) * MAX_LINEAR_VEL;
-        if (linear_vel < 0.05f && linear_vel > -0.05f) {
-            linear_vel = 0.0f; // Deadzone for joystick
-        }
-
-        // Get joystick Right X used for angular velocity control
-        int16_t rx = 128 - ps2_state.rx; // Range: 0-255, 128 is center
-        // Map rx to angular velocity (-1.0 to 1.0 rad/s)
-        angular_vel = ((float)rx / 128.0f) * MAX_ANGULAR_VEL;
-        if (angular_vel < 0.1f && angular_vel > -0.1f) {
-            angular_vel = 0.0f; // Deadzone for joystick
-        }
-
-        // Printf LY and RX for debugging
-        printf("LY:%d,RX:%d\r\n", ly, rx);
-
-
-        // Get target RPM for debugging
-        float target_rpm = getTargetRPM(MOTOR_L);
-        float curr_rpm = getCurrentRPM(MOTOR_L);
-        printf("l_sp:%d,l_curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
-
-        target_rpm = getTargetRPM(MOTOR_R);
-        curr_rpm = getCurrentRPM(MOTOR_R);
-        // printf("r_sp:%d,r_curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
-    }
-
-    // Set robot velocity based on joystick input
-    diff_drive_set_velocity(linear_vel, angular_vel);
-
-    // printf("PS2X Mode: 0x%02X, Type: 0x%02X\r\n", ps2_state.mode, ps2_state.type);
-    // printf("Joystick Left: X=%d Y=%d\r\n", ps2_state.lx, ps2_state.ly);
-    // printf("Joystick Right: X=%d Y=%d\r\n", ps2_state.rx, ps2_state.ry);
-    // if (ps2_state.btn1.up == PS2X_BTN_ACTIVE) {
-    //     printf("Up button is pressed\r\n");
-    // }
-
-    // float duty_cycle = (adc_value * 100.0f) / 4095.0f; // Convert ADC value to percentage
-    // int duty_int = (int)duty_cycle;
-    // int duty_frac = (int)((duty_cycle - duty_int) * 100);
-    // printf("Duty Cycle: %d.%02d%%\n", duty_int, duty_frac);
-
-    // // Set RPM for motors left according to ADC valueto test PID control
-    // setMotorRPM(MOTOR_L, duty_cycle * 2);
-    // float target_rpm = getTargetRPM(MOTOR_L);
-    // float curr_rpm = getCurrentRPM(MOTOR_L);
-    // printf("set:%d, curr:%d\r\n",  (int)target_rpm, (int)curr_rpm);
-
-    // if (duty_cycle < 5.0) {
-    //     // Stop robot
-    //     diff_drive_stop();
-    // } else {
-    //     // Set robot velocity based on duty cycle (0.5 m/s max)
-    //     float linear_vel = (duty_cycle / 100.0f) * MAX_LINEAR_VEL; // Scale to max speed
-    //     diff_drive_set_velocity(linear_vel, 0.0f);                 // Move forward with no rotation
-    //     // int _int = (int)linear_vel;
-    //     // int _frac = (int)((linear_vel - _int) * 100);
-    //     // printf("Linear Velocity: %d.%02d m/s\n", _int, _frac);
-    // }
-
-    LL_mDelay(50);
+    uart3_comm_poll();
+    peripheral_control_loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

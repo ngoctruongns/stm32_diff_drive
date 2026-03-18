@@ -78,6 +78,11 @@ void input_capture_tim3_cc1_handler(uint32_t captured_value);
 void input_capture_tim3_cc2_handler(uint32_t captured_value);
 void adc1_interrupt_handler(uint16_t adc_value);
 void usart2_interrupt_handler(uint8_t data);
+void uart3_comm_init(void);
+void uart3_comm_poll(void);
+void usart3_idle_interrupt_handler(void);
+void usart3_dma_rx_interrupt_handler(void);
+void usart3_dma_tx_interrupt_handler(void);
 void tim7_interrupt_handler(void);
 void tim10_interrupt_handler(void);
 void sys_tick_handler(void);
@@ -88,6 +93,10 @@ void delay_us(uint32_t us);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SPI1_CS_Pin LL_GPIO_PIN_3
+#define SPI1_CS_GPIO_Port GPIOE
+#define BUZZER_Pin LL_GPIO_PIN_5
+#define BUZZER_GPIO_Port GPIOE
 #define PC14_OSC32_IN_Pin LL_GPIO_PIN_14
 #define PC14_OSC32_IN_GPIO_Port GPIOC
 #define PC15_OSC32_OUT_Pin LL_GPIO_PIN_15
@@ -112,6 +121,8 @@ void delay_us(uint32_t us);
 #define L298_IN1_GPIO_Port GPIOC
 #define L298_IN2_Pin LL_GPIO_PIN_5
 #define L298_IN2_GPIO_Port GPIOC
+#define BOOT1_Pin LL_GPIO_PIN_2
+#define BOOT1_GPIO_Port GPIOB
 #define PID_CLK_Pin LL_GPIO_PIN_7
 #define PID_CLK_GPIO_Port GPIOE
 #define CLK_IN_Pin LL_GPIO_PIN_10

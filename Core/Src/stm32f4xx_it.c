@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ws2812.h"
 
 /* USER CODE END Includes */
 
@@ -200,6 +201,74 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 stream1 global interrupt.
+  */
+void DMA1_Stream1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
+
+  if (LL_DMA_IsActiveFlag_HT1(DMA1) && LL_DMA_IsEnabledIT_HT(DMA1, LL_DMA_STREAM_1)) {
+    LL_DMA_ClearFlag_HT1(DMA1);
+    usart3_dma_rx_interrupt_handler();
+  }
+
+  if (LL_DMA_IsActiveFlag_TC1(DMA1) && LL_DMA_IsEnabledIT_TC(DMA1, LL_DMA_STREAM_1)) {
+    LL_DMA_ClearFlag_TC1(DMA1);
+    usart3_dma_rx_interrupt_handler();
+  }
+
+  if (LL_DMA_IsActiveFlag_TE1(DMA1)) {
+    LL_DMA_ClearFlag_TE1(DMA1);
+  }
+
+  if (LL_DMA_IsActiveFlag_DME1(DMA1)) {
+    LL_DMA_ClearFlag_DME1(DMA1);
+  }
+
+  if (LL_DMA_IsActiveFlag_FE1(DMA1)) {
+    LL_DMA_ClearFlag_FE1(DMA1);
+  }
+
+  /* USER CODE END DMA1_Stream1_IRQn 0 */
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream3 global interrupt.
+  */
+void DMA1_Stream3_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 0 */
+
+  if (LL_DMA_IsActiveFlag_TC3(DMA1) && LL_DMA_IsEnabledIT_TC(DMA1, LL_DMA_STREAM_3)) {
+    LL_DMA_ClearFlag_TC3(DMA1);
+    usart3_dma_tx_interrupt_handler();
+  }
+
+  if (LL_DMA_IsActiveFlag_TE3(DMA1)) {
+    LL_DMA_ClearFlag_TE3(DMA1);
+    usart3_dma_tx_interrupt_handler();
+  }
+
+  if (LL_DMA_IsActiveFlag_DME3(DMA1)) {
+    LL_DMA_ClearFlag_DME3(DMA1);
+    usart3_dma_tx_interrupt_handler();
+  }
+
+  if (LL_DMA_IsActiveFlag_FE3(DMA1)) {
+    LL_DMA_ClearFlag_FE3(DMA1);
+    usart3_dma_tx_interrupt_handler();
+  }
+
+  /* USER CODE END DMA1_Stream3_IRQn 0 */
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream3_IRQn 1 */
+}
+
+/**
   * @brief This function handles ADC1, ADC2 and ADC3 global interrupts.
   */
 void ADC_IRQHandler(void)
@@ -274,6 +343,31 @@ void USART2_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  if (LL_USART_IsActiveFlag_IDLE(USART3) && LL_USART_IsEnabledIT_IDLE(USART3)) {
+    volatile uint32_t dummy;
+    dummy = USART3->SR;
+    dummy = USART3->DR;
+    (void)dummy;
+    usart3_idle_interrupt_handler();
+  }
+
+  if (LL_USART_IsActiveFlag_ORE(USART3)) {
+    LL_USART_ClearFlag_ORE(USART3);
+  }
+
+  /* USER CODE END USART3_IRQn 0 */
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  /* USER CODE END USART3_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM5 global interrupt.
   */
 void TIM5_IRQHandler(void)
@@ -309,7 +403,7 @@ void TIM7_IRQHandler(void)
 void DMA2_Stream1_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2_Stream1_IRQn 0 */
-
+    WS2812_DMA_IRQHandler();
   /* USER CODE END DMA2_Stream1_IRQn 0 */
   /* USER CODE BEGIN DMA2_Stream1_IRQn 1 */
 
