@@ -143,6 +143,10 @@ void delay_us(uint32_t us);
 #define LD6_GPIO_Port GPIOD
 #define I2S3_MCK_Pin LL_GPIO_PIN_7
 #define I2S3_MCK_GPIO_Port GPIOC
+#define I2C3_SDA_Pin LL_GPIO_PIN_9
+#define I2C3_SDA_GPIO_Port GPIOC
+#define I2C3_SCL_Pin LL_GPIO_PIN_8
+#define I2C3_SCL_GPIO_Port GPIOA
 #define VBUS_FS_Pin LL_GPIO_PIN_9
 #define VBUS_FS_GPIO_Port GPIOA
 #define OTG_FS_ID_Pin LL_GPIO_PIN_10
